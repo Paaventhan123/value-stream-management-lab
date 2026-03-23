@@ -1,11 +1,11 @@
 {
   "name": "value-stream-management-lab",
   "version": "1.0.0",
-  "description": "Small Node.js app for Value Stream Management lab",
+  "description": "Small Node.js app for VSM lab",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "build": "mkdir -p dist && cp app.js dist/app.js",
+    "build": "node -e \"const fs=require('fs'); fs.mkdirSync('dist',{recursive:true}); fs.copyFileSync('app.js','dist/app.js');\"",
     "test": "node --test"
   },
   "dependencies": {
