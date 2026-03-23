@@ -1,0 +1,136 @@
+name: Node.js CI/CD for VSM Lab
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build Stage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Record build start time
+        run: echo "BUILD_START=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build application
+        run: npm run build
+
+      - name: Record build end time
+        run: |
+          BUILD_END=$(date +%s)
+          BUILD_DURATION=$((BUILD_END - BUILD_START))
+          echo "Build duration: ${BUILD_DURATION} seconds"
+          echo "Build duration: ${BUILD_DURATION} seconds" > build-metrics.txt
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            dist
+            build-metrics.txt
+          retention-days: 5
+
+  test:
+    name: Test Stage
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Record test start time
+        run: echo "TEST_START=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: build-output
+
+      - name: Run tests
+        run: npm test
+
+      - name: Record test end time
+        run: |
+          TEST_END=$(date +%s)
+          TEST_DURATION=$((TEST_END - TEST_START))
+          echo "Test duration: ${TEST_DURATION} seconds"
+          echo "Test duration: ${TEST_DURATION} seconds" > test-metrics.txt
+
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-metrics.txt
+          retention-days: 5
+
+  deploy:
+    name: Deploy Stage
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Record deploy start time
+        run: echo "DEPLOY_START=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: build-output
+
+      - name: Prepare dist folder
+        run: |
+          mkdir -p dist
+          cp -r build-output/dist/* dist/
+
+      - name: Make deploy script executable
+        run: chmod +x scripts/deploy.sh
+
+      - name: Run deploy
+        run: ./scripts/deploy.sh
+
+      - name: Record deploy end time
+        run: |
+          DEPLOY_END=$(date +%s)
+          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
+          echo "Deploy duration: ${DEPLOY_DURATION} seconds"
+          echo "Deploy duration: ${DEPLOY_DURATION} seconds" > deploy-metrics.txt
+
+      - name: Upload deploy artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-output
+          path: |
+            release
+            deploy-metrics.txt
+          retention-days: 5
